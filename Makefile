@@ -3,16 +3,15 @@ start_db:
 
 stop_db:
 	docker compose down
-
+	
 migrate:
-	db-migrate up -e dev
+	yarn db-migrate up -e dev
 
 migrate-down:
-	db-migrate down
+	yarn db-migrate down
 
 create_migration:
-	db-migrate create $(n) --sql-file
-
+	yarn db-migrate create $(n) --sql-file
 server:
 	yarn run dev
 

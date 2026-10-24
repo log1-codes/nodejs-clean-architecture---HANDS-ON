@@ -1,49 +1,44 @@
-import { Request, Response } from "express";
-import { pgClient } from "../dbConnection";
-import { NotifyToPromotionService, SendSendGridEmail } from "../helper";
+import { NextFunction, Request, Response } from "express";
+import { IProductInteractor } from "../interfaces/IproductInteractor";
+import { inject, injectable } from "inversify";
+import { INTERFACE_TYPE } from "../utils";
 
-const dbConn = pgClient();
+@injectable()
+export class ProductController {
+    private interactor: IProductInteractor
+    constructor(
+        @inject(INTERFACE_TYPE.ProductInteractor)
+        interactor: IProductInteractor) {
+        this.interactor = interactor
+    }
+    async onCreateProduct(req: Request, res: Response, next: NextFunction) {
+        try {
+            const body = req.body;
+            const data = await this.interactor.createProduct(body)
+            return res.status(200).json(data);
+        } catch (error) {
+            next(error)
+        }
+    }
+    async onGetProducts(req: Request, res: Response, next: NextFunction) {
+        try {
+            const offset = parseInt(`${req.query.offset}`) || 0
+            const limit = parseInt(`${req.query.limit}}`) || 10;
+            const data = await this.interactor.getProducts(limit, offset)
+            return res.status(200).json(data);
+        } catch (error) {
+            next(error)
+        }
+    }
+    async onUpdateProduct(req: Request, res: Response, next: NextFunction) {
 
-export const CreateProduct = async (req: Request, res: Response) => {
-  await dbConn.connect();
-
-  const body = req.body;
-  // validate logic
-
-  const product = await dbConn.query(
-    `INSERT INTO products (name,description,price,stock) VALUES ($1,$2,$3,$4) RETURNING *`,
-    [body.name, body.desc, body.price, body.stock]
-  );
-
-  console.log(`Product created! ${product.rows[0]}`);
-  await NotifyToPromotionService(product.rows[0]);
-
-  return res.status(200).json({ product: product.rows[0] });
-};
-
-export const GetProducts = async (req: Request, res: Response) => {
-  await dbConn.connect();
-
-  const products = await dbConn.query(`SELECT * FROM products`);
-
-  console.log(`Products result! ${JSON.stringify(products.rows)}`);
-
-  return res.status(200).json(products.rows);
-};
-
-export const UpdateProductStock = async (req: Request, res: Response) => {
-  await dbConn.connect();
-  const id = req.params.id;
-  const body = req.body;
-
-  const product = await dbConn.query(
-    `UPDATE products SET stock=$1 WHERE id=$2 RETURNING *`,
-    [body.stock, id]
-  );
-
-  console.log(`Product Updated! ${JSON.stringify(product.rows[0])}`);
-
-  await SendSendGridEmail(product.rows[0]);
-
-  return res.status(200).json({ product: product.rows[0] });
-};
+        try {
+            const id = parseInt(req.params.id);
+            const stock = req.body.stock;
+            const data = await this.interactor.updateStock(id, stock)
+            return res.status(200).json(data)
+        } catch (error) {
+            next(error)
+        }
+    }
+}
